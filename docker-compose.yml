@@ -38,6 +38,8 @@ services:
       - NET_ADMIN
       - NET_RAW
     command: /etc/sni-configs/config.json
+    environment:
+      RUST_LOG: info
     ports:
       - "127.0.0.1:40443:40443"
     volumes:

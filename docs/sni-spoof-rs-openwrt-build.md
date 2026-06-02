@@ -374,6 +374,11 @@ Press `Ctrl-C` to stop after testing.
 
 ## Step 7 — Install as a Persistent Service
 
+```bash
+mkdir -p /usr/local/bin/
+mkdir -p /etc/sni-spoof-rs/
+```
+
 Create `/etc/init.d/sni-spoof-rs` on the router:
 
 ```sh
@@ -384,9 +389,12 @@ START=99
 STOP=10
 USE_PROCD=1
 
+PROG=/usr/local/bin/sni-spoof-rs
+CONFIG=/etc/sni-spoof-rs/config.json
+
 start_service() {
     procd_open_instance
-    procd_set_param command /usr/local/bin/sni-spoof-rs /etc/sni-spoof-rs/config.json
+    procd_set_param command "$PROG" "$CONFIG"
     procd_set_param env RUST_LOG=warn
     procd_set_param respawn 3600 5 0
     procd_set_param stdout 1

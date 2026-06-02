@@ -1,0 +1,26 @@
+FROM docker.arvancloud.ir/alpine:3.23
+
+RUN echo "https://mirror.arvancloud.ir/alpine/v3.23/main" > /etc/apk/repositories && \
+    echo "https://mirror.arvancloud.ir/alpine/v3.23/community" >> /etc/apk/repositories
+
+RUN apk update
+RUN apk add --no-cache \
+    rust \
+    cargo \
+    ca-certificates \
+    iptables
+
+WORKDIR /src
+COPY . .
+
+RUN cargo build --release \
+    && strip target/release/sni-spoof-rs \
+    && cp target/release/sni-spoof-rs /usr/local/bin/sni-spoof-rs \
+    && rm -rf /src
+
+COPY config.json /etc/sni-spoof/config.json
+
+# Requires CAP_NET_RAW for AF_PACKET raw sockets
+# docker run --cap-add NET_RAW ...
+ENTRYPOINT ["/usr/local/bin/sni-spoof-rs"]
+CMD ["/etc/sni-spoof/config.json"]

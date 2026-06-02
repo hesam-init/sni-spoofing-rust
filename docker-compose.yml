@@ -1,0 +1,73 @@
+version: "3.8"
+
+# ─────────────────────────────────────────────
+# Logging presets
+# ─────────────────────────────────────────────
+x-logging-default: &logging-default
+  driver: json-file
+  options:
+    max-size: "8m"
+    max-file: "1"
+
+x-logging-silent: &logging-silent
+  driver: "none"
+
+# ─────────────────────────────────────────────
+# Services
+# ─────────────────────────────────────────────
+services:
+  sni-spoof:
+    build:
+      context: ${PWD}
+      dockerfile: Dockerfile.alpine
+      network: host
+      # extra_hosts:
+      #   - "host.docker.internal:host-gateway"
+      # args:
+      #   ALL_PROXY: socks5://host.docker.internal:20170
+      #   HTTPS_PROXY: socks5://host.docker.internal:20170
+      #   HTTP_PROXY: socks5://host.docker.internal:20170
+    image: sni-spoof-rust:latest
+    # dns:
+    #   - 178.22.122.101
+    #   - 185.51.200.1
+    container_name: sni-spoof-rust
+    logging: *logging-default
+    restart: unless-stopped
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    command: /etc/sni-configs/config.json
+    ports:
+      - "127.0.0.1:40443:40443"
+    volumes:
+      - $PWD/configs/hcaptcha.json:/etc/sni-configs/config.json:ro
+
+  v2raya:
+    image: mzz2017/v2raya:v2.2.7.5
+    container_name: spoof-v2raya
+    logging: *logging-default
+    restart: unless-stopped
+    network_mode: host
+    privileged: true
+    depends_on:
+      - sni-spoof
+    environment:
+      V2RAYA_LOG_FILE: /tmp/v2raya.log
+      V2RAYA_V2RAY_ASSETSDIR: /usr/local/share/v2ray
+      V2RAYA_V2RAY_BIN: /usr/local/bin/xray
+      V2RAYA_NFTABLES_SUPPORT: "off"
+      IPTABLES_MODE: legacy
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - $PWD/v2raya:/etc/v2raya
+      - /lib/modules:/lib/modules:ro
+      - /etc/resolv.conf:/etc/resolv.conf
+
+# ─────────────────────────────────────────────
+# Networks
+# ─────────────────────────────────────────────
+networks:
+  sni-spoof:
+    driver: bridge
